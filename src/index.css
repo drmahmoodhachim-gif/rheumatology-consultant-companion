@@ -126,6 +126,22 @@ button.ghost {
   border-color: rgba(184, 205, 255, 0.3);
 }
 
+button.active {
+  background: linear-gradient(115deg, rgba(116, 217, 255, 0.4), rgba(142, 141, 255, 0.34));
+  border-color: rgba(116, 217, 255, 0.7);
+}
+
+button.danger {
+  background: rgba(255, 107, 138, 0.2);
+  border-color: rgba(255, 107, 138, 0.45);
+}
+
+button.small {
+  padding: 5px 10px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+}
+
 .grid {
   display: grid;
   gap: 20px;
@@ -198,6 +214,26 @@ label {
   gap: 8px;
   font-size: 0.92rem;
   color: #dce7ff;
+}
+
+input[type='text'],
+input[type='number'],
+input[type='date'],
+textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(184, 205, 255, 0.28);
+  background: rgba(11, 16, 32, 0.62);
+  color: var(--text-main);
+  padding: 9px 10px;
+  font: inherit;
+}
+
+input[type='text']:focus,
+input[type='number']:focus,
+input[type='date']:focus,
+textarea:focus {
+  outline: 2px solid rgba(116, 217, 255, 0.42);
+  outline-offset: 1px;
 }
 
 input[type='range'] {
@@ -294,6 +330,93 @@ h3 {
   gap: 10px;
 }
 
+.status-message {
+  margin-top: 12px;
+  display: inline-block;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(61, 226, 159, 0.15);
+  border: 1px solid rgba(61, 226, 159, 0.4);
+  color: #ccffe8;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.form-grid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summary-row span {
+  border: 1px solid rgba(184, 205, 255, 0.2);
+  border-radius: 10px;
+  padding: 7px 10px;
+  background: rgba(11, 16, 32, 0.45);
+  font-size: 0.86rem;
+}
+
+.timeline {
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-item {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(184, 205, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(11, 16, 32, 0.45);
+  padding: 10px;
+}
+
+.checklist {
+  display: grid;
+  gap: 6px;
+}
+
+.checklist label {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+
+.inline-group {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+}
+
+.list-area {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(184, 205, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(11, 16, 32, 0.45);
+  padding: 8px 10px;
+}
+
+.list-item.stacked {
+  display: grid;
+  justify-content: unset;
+  align-items: unset;
+}
+
 .footer {
   text-align: center;
   color: var(--text-soft);
@@ -314,6 +437,15 @@ h3 {
   }
 
   .resource-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid,
+  .form-grid.compact {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-group {
     grid-template-columns: 1fr;
   }
 }
