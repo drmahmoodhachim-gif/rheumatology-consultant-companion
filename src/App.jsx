@@ -36,6 +36,151 @@ const defaultSimulator = {
   adherenceDelta: 10,
 }
 
+const LANGUAGES = ['en', 'ar']
+
+const I18N = {
+  en: {
+    title: 'Fully operational workspace for consultants and patients.',
+    subtitle:
+      'Track disease activity, medication adherence, education milestones, and visit progress with persistent local data and export-ready clinical reports.',
+    consultantMode: 'Consultant Mode',
+    patientMode: 'Patient Mode',
+    exportReport: 'Export Report',
+    resetAll: 'Reset All Data',
+    predictiveDashboard: 'Predictive Dashboard',
+    diseaseAssistant: 'Disease Activity Assistant',
+    multilingualAndDrugHub: 'Multilingual + Drug Intelligence Hub',
+    language: 'Language',
+    selectedDrug: 'Selected drug',
+    class: 'Class',
+    indications: 'Indications',
+    keySideEffects: 'Key side effects',
+    contraindications: 'Contraindications',
+    pharmacogenetics: 'Pharmacogenetics',
+    noPgx: 'No established pharmacogenetic guidance listed for this drug.',
+    interactionChecker: 'Drug-Drug Interaction Checker',
+    drugA: 'Drug A',
+    drugB: 'Drug B',
+    interactionResult: 'Interaction result',
+    noInteraction: 'No major interaction rule found in this local knowledge base.',
+    suggestedTests: 'Suggested Tests',
+    addLabResult: 'Add Lab Test Result',
+    addRadiology: 'Add Radiology Entry',
+    testType: 'Test type',
+    value: 'Value',
+    unit: 'Unit',
+    normalRange: 'Normal range',
+    interpretation: 'Interpretation',
+    modality: 'Modality',
+    region: 'Region',
+    finding: 'Finding',
+    impression: 'Impression',
+    add: 'Add',
+    savedTests: 'Saved Test Results',
+    savedRadiology: 'Saved Radiology Results',
+  },
+  ar: {
+    title: 'منصة تشغيلية متكاملة للأطباء والمرضى.',
+    subtitle:
+      'تتبّع نشاط المرض والالتزام الدوائي والتعليم الصحي وتقدم الزيارات مع حفظ محلي وتقرير قابل للتصدير.',
+    consultantMode: 'وضع الاستشاري',
+    patientMode: 'وضع المريض',
+    exportReport: 'تصدير التقرير',
+    resetAll: 'إعادة ضبط البيانات',
+    predictiveDashboard: 'لوحة التنبؤ',
+    diseaseAssistant: 'مساعد نشاط المرض',
+    multilingualAndDrugHub: 'واجهة متعددة اللغات + معلومات دوائية',
+    language: 'اللغة',
+    selectedDrug: 'الدواء المختار',
+    class: 'التصنيف',
+    indications: 'الاستطبابات',
+    keySideEffects: 'الآثار الجانبية المهمة',
+    contraindications: 'موانع الاستعمال',
+    pharmacogenetics: 'الدوائيات الجينية',
+    noPgx: 'لا توجد توصيات دوائية جينية ثابتة لهذا الدواء ضمن هذه القاعدة المحلية.',
+    interactionChecker: 'فاحص التداخلات الدوائية',
+    drugA: 'الدواء الأول',
+    drugB: 'الدواء الثاني',
+    interactionResult: 'نتيجة التداخل',
+    noInteraction: 'لا يوجد تداخل رئيسي مطابق في قاعدة المعرفة المحلية.',
+    suggestedTests: 'الفحوصات المقترحة',
+    addLabResult: 'إضافة نتيجة فحص مخبري',
+    addRadiology: 'إضافة نتيجة شعاعية',
+    testType: 'نوع الفحص',
+    value: 'القيمة',
+    unit: 'الوحدة',
+    normalRange: 'المدى الطبيعي',
+    interpretation: 'التفسير',
+    modality: 'نوع التصوير',
+    region: 'المنطقة',
+    finding: 'النتيجة',
+    impression: 'الانطباع النهائي',
+    add: 'إضافة',
+    savedTests: 'نتائج الفحوصات المحفوظة',
+    savedRadiology: 'النتائج الشعاعية المحفوظة',
+  },
+}
+
+const DRUG_CATALOG = [
+  {
+    key: 'methotrexate',
+    name: { en: 'Methotrexate', ar: 'ميثوتريكسات' },
+    class: { en: 'csDMARD', ar: 'دواء معدّل لمسار المرض' },
+    indications: { en: 'RA, PsA, inflammatory arthritis', ar: 'الروماتويد، الصدفية المفصلية، التهاب المفاصل الالتهابي' },
+    sideEffects: { en: 'Hepatotoxicity, cytopenia, stomatitis', ar: 'سمية كبدية، نقص خلايا الدم، التهاب الفم' },
+    contraindications: { en: 'Pregnancy, severe liver disease', ar: 'الحمل، مرض كبدي شديد' },
+    pgx: [{ gene: 'MTHFR', note: { en: 'Variants may influence toxicity risk in some populations.', ar: 'قد تؤثر بعض الطفرات على خطورة السمية لدى بعض الفئات.' } }],
+    tests: ['CBC', 'ALT/AST', 'Creatinine', 'Hepatitis B/C screen'],
+  },
+  {
+    key: 'hydroxychloroquine',
+    name: { en: 'Hydroxychloroquine', ar: 'هيدروكسي كلوروكوين' },
+    class: { en: 'csDMARD', ar: 'دواء معدّل لمسار المرض' },
+    indications: { en: 'RA, SLE', ar: 'الروماتويد، الذئبة' },
+    sideEffects: { en: 'Retinopathy, GI upset, QT concerns', ar: 'اعتلال شبكي، اضطراب هضمي، إطالة QT' },
+    contraindications: { en: 'Known retinal disease caution', ar: 'الحذر عند وجود مرض شبكي' },
+    pgx: [],
+    tests: ['Baseline ophthalmology', 'Annual ophthalmology', 'CBC', 'LFT'],
+  },
+  {
+    key: 'leflunomide',
+    name: { en: 'Leflunomide', ar: 'ليفلو نومايد' },
+    class: { en: 'csDMARD', ar: 'دواء معدّل لمسار المرض' },
+    indications: { en: 'RA', ar: 'الروماتويد' },
+    sideEffects: { en: 'Hepatotoxicity, hypertension, diarrhea', ar: 'سمية كبدية، ارتفاع ضغط، إسهال' },
+    contraindications: { en: 'Pregnancy, severe liver disease', ar: 'الحمل، مرض كبدي شديد' },
+    pgx: [],
+    tests: ['CBC', 'ALT/AST', 'Blood pressure', 'Pregnancy test'],
+  },
+  {
+    key: 'adalimumab',
+    name: { en: 'Adalimumab', ar: 'أداليموماب' },
+    class: { en: 'TNF inhibitor biologic', ar: 'بيولوجي مثبط TNF' },
+    indications: { en: 'RA, PsA, axial SpA', ar: 'الروماتويد، الصدفية المفصلية، التهاب الفقار' },
+    sideEffects: { en: 'Infection risk, injection site reaction', ar: 'زيادة خطر العدوى، تفاعل موضع الحقن' },
+    contraindications: { en: 'Active serious infection', ar: 'عدوى فعالة شديدة' },
+    pgx: [],
+    tests: ['TB test', 'Hepatitis B/C screen', 'CBC', 'CRP'],
+  },
+  {
+    key: 'tofacitinib',
+    name: { en: 'Tofacitinib', ar: 'توفاسيتينيب' },
+    class: { en: 'JAK inhibitor', ar: 'مثبط JAK' },
+    indications: { en: 'RA, PsA', ar: 'الروماتويد، الصدفية المفصلية' },
+    sideEffects: { en: 'Herpes zoster, thrombosis warning, lipid rise', ar: 'الحزام الناري، خطر الخثار، ارتفاع الدهون' },
+    contraindications: { en: 'Severe active infection', ar: 'عدوى فعالة شديدة' },
+    pgx: [{ gene: 'CYP3A4/2C19', note: { en: 'Dose caution with strong CYP interactions.', ar: 'يلزم الحذر بالجرعة مع التداخلات القوية على CYP.' } }],
+    tests: ['CBC', 'Lipid profile', 'LFT', 'TB test'],
+  },
+]
+
+const INTERACTIONS = [
+  { a: 'methotrexate', b: 'leflunomide', severity: 'High', note: { en: 'Higher hepatotoxicity and marrow suppression risk.', ar: 'زيادة خطر السمية الكبدية وكبت نقي العظم.' } },
+  { a: 'methotrexate', b: 'tofacitinib', severity: 'Moderate', note: { en: 'Monitor infection and cytopenia risk closely.', ar: 'مراقبة خطر العدوى ونقص خلايا الدم.' } },
+  { a: 'adalimumab', b: 'tofacitinib', severity: 'High', note: { en: 'Additive immunosuppression risk; combination usually avoided.', ar: 'زيادة التثبيط المناعي؛ غالبا يُتجنب الجمع.' } },
+  { a: 'hydroxychloroquine', b: 'tofacitinib', severity: 'Low', note: { en: 'Usually manageable; monitor QT and tolerability.', ar: 'غالبا يمكن تدبيره؛ راقب QT والتحمل.' } },
+]
+
 const educationContent = {
   'newly-diagnosed': {
     title: 'Newly Diagnosed Starter Path',
@@ -130,6 +275,7 @@ function App() {
   const initialData = loadFromStorage()
   const [mode, setMode] = useState('consultant')
   const [profile, setProfile] = useState(initialData?.profile ?? defaultProfile)
+  const [language, setLanguage] = useState(initialData?.language ?? 'en')
   const [pain, setPain] = useState(initialData?.triage?.pain ?? 4)
   const [stiffness, setStiffness] = useState(initialData?.triage?.stiffness ?? 4)
   const [swollenJoints, setSwollenJoints] = useState(initialData?.triage?.swollenJoints ?? 4)
@@ -138,6 +284,9 @@ function App() {
   const [checklist, setChecklist] = useState(initialData?.checklist ?? defaultChecklist)
   const [predictors, setPredictors] = useState(initialData?.predictors ?? defaultPredictors)
   const [simulator, setSimulator] = useState(initialData?.simulator ?? defaultSimulator)
+  const [selectedDrug, setSelectedDrug] = useState(initialData?.selectedDrug ?? DRUG_CATALOG[0].key)
+  const [interactionA, setInteractionA] = useState(initialData?.interactionA ?? DRUG_CATALOG[0].key)
+  const [interactionB, setInteractionB] = useState(initialData?.interactionB ?? DRUG_CATALOG[1].key)
   const [meds, setMeds] = useState(initialData?.meds ?? [])
   const [medInput, setMedInput] = useState('')
   const [journalEntry, setJournalEntry] = useState({
@@ -152,22 +301,74 @@ function App() {
   })
   const [journal, setJournal] = useState(initialData?.journal ?? [])
   const [visitHistory, setVisitHistory] = useState(initialData?.visitHistory ?? [])
+  const [testEntry, setTestEntry] = useState(
+    initialData?.testEntry ?? {
+      date: new Date().toISOString().slice(0, 10),
+      type: 'CRP',
+      value: '',
+      unit: 'mg/L',
+      normalRange: '',
+      interpretation: '',
+    },
+  )
+  const [testResults, setTestResults] = useState(initialData?.testResults ?? [])
+  const [radiologyEntry, setRadiologyEntry] = useState(
+    initialData?.radiologyEntry ?? {
+      date: new Date().toISOString().slice(0, 10),
+      modality: 'Ultrasound',
+      region: 'Hands/Wrists',
+      finding: '',
+      impression: '',
+    },
+  )
+  const [radiologyResults, setRadiologyResults] = useState(initialData?.radiologyResults ?? [])
   const [statusMessage, setStatusMessage] = useState('')
 
   useEffect(() => {
     const payload = {
       profile,
+      language,
       triage: { pain, stiffness, swollenJoints, energy },
       educationTrack,
       checklist,
       predictors,
       simulator,
+      selectedDrug,
+      interactionA,
+      interactionB,
       meds,
       journal,
       visitHistory,
+      testEntry,
+      testResults,
+      radiologyEntry,
+      radiologyResults,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [profile, pain, stiffness, swollenJoints, energy, educationTrack, checklist, predictors, simulator, meds, journal, visitHistory])
+  }, [
+    profile,
+    language,
+    pain,
+    stiffness,
+    swollenJoints,
+    energy,
+    educationTrack,
+    checklist,
+    predictors,
+    simulator,
+    selectedDrug,
+    interactionA,
+    interactionB,
+    meds,
+    journal,
+    visitHistory,
+    testEntry,
+    testResults,
+    radiologyEntry,
+    radiologyResults,
+  ])
+
+  const t = (key) => I18N[language]?.[key] ?? I18N.en[key] ?? key
 
   const activityScore = useMemo(() => {
     const weightedSum = pain * 0.32 + stiffness * 0.28 + swollenJoints * 0.3 + (10 - energy) * 0.1
@@ -236,6 +437,34 @@ function App() {
     ]
     return drivers.sort((a, b) => b.value - a.value).slice(0, 4)
   }, [predictors, activityScore, medicationAdherence, journalTrendPerDay])
+
+  const currentDrug = useMemo(
+    () => DRUG_CATALOG.find((drug) => drug.key === selectedDrug) ?? DRUG_CATALOG[0],
+    [selectedDrug],
+  )
+
+  const interactionResult = useMemo(() => {
+    const normalizedA = interactionA
+    const normalizedB = interactionB
+    return (
+      INTERACTIONS.find(
+        (entry) =>
+          (entry.a === normalizedA && entry.b === normalizedB) ||
+          (entry.a === normalizedB && entry.b === normalizedA),
+      ) ?? null
+    )
+  }, [interactionA, interactionB])
+
+  const dynamicSuggestedTests = useMemo(() => {
+    const mapped = meds
+      .map((med) =>
+        DRUG_CATALOG.find((drug) => med.name.toLowerCase().includes(drug.name.en.toLowerCase().split(' ')[0])),
+      )
+      .filter(Boolean)
+      .flatMap((drug) => drug.tests)
+    const base = ['CRP', 'ESR', 'CBC', 'LFT', 'Creatinine']
+    return [...new Set([...base, ...mapped])]
+  }, [meds])
 
   const sparklineData = useMemo(() => {
     if (!recentJournal.length) return []
@@ -372,6 +601,18 @@ function App() {
     setStatusMessage('Symptom journal entry added.')
   }
 
+  function addTestResult() {
+    const entry = { id: generateId(), ...testEntry }
+    setTestResults((prev) => [entry, ...prev].slice(0, 40))
+    setStatusMessage('Lab result added.')
+  }
+
+  function addRadiologyResult() {
+    const entry = { id: generateId(), ...radiologyEntry }
+    setRadiologyResults((prev) => [entry, ...prev].slice(0, 30))
+    setStatusMessage('Radiology result added.')
+  }
+
   function exportReport() {
     const latestVisit = visitHistory[0]
     const latestJournal = journal[0]
@@ -394,6 +635,7 @@ function App() {
       `Flare Probability Score: ${flareScore}%`,
       `14-Day Stability Forecast: ${forecast14Day}%`,
       `Scenario Projected Flare Score: ${simulatedScenario.projectedScore}% (${simulatedScenario.projectedRisk})`,
+      `Language: ${language.toUpperCase()}`,
       '',
       `Tender joints: ${predictors.tenderJoints}`,
       `CRP (mg/L): ${predictors.crp}`,
@@ -422,6 +664,20 @@ function App() {
       'Action Plan:',
       ...actionPlan.map((step) => `- ${step}`),
       '',
+      'Lab Results:',
+      ...(testResults.length
+        ? testResults.map(
+            (r) => `- ${r.date} | ${r.type}: ${r.value} ${r.unit} (range ${r.normalRange || 'N/A'}) | ${r.interpretation || 'N/A'}`,
+          )
+        : ['- None']),
+      '',
+      'Radiology:',
+      ...(radiologyResults.length
+        ? radiologyResults.map(
+            (r) => `- ${r.date} | ${r.modality} ${r.region} | ${r.finding || 'N/A'} | Impression: ${r.impression || 'N/A'}`,
+          )
+        : ['- None']),
+      '',
       'Medications:',
       ...(meds.length ? meds.map((m) => `- ${m.name}: ${m.takenToday ? 'Taken today' : 'Pending'}`) : ['- None']),
     ]
@@ -432,6 +688,7 @@ function App() {
   function resetAllData() {
     localStorage.removeItem(STORAGE_KEY)
     setProfile(defaultProfile)
+    setLanguage('en')
     setPain(4)
     setStiffness(4)
     setSwollenJoints(4)
@@ -440,36 +697,44 @@ function App() {
     setChecklist(defaultChecklist)
     setPredictors(defaultPredictors)
     setSimulator(defaultSimulator)
+    setSelectedDrug(DRUG_CATALOG[0].key)
+    setInteractionA(DRUG_CATALOG[0].key)
+    setInteractionB(DRUG_CATALOG[1].key)
     setMeds([])
     setJournal([])
     setVisitHistory([])
+    setTestResults([])
+    setRadiologyResults([])
     setStatusMessage('All local data reset.')
   }
 
   return (
-    <div className={`rcc-app ${embedMode ? 'rcc-embed' : ''}`}>
+    <div className={`rcc-app ${embedMode ? 'rcc-embed' : ''} ${language === 'ar' ? 'rcc-rtl' : ''}`}>
       <div className="app-shell">
       <header className="hero">
         <div className="hero-glow" />
         <p className="eyebrow">GCC AIR Rheumatology Consultant Companion</p>
-        <h1>Fully operational workspace for consultants and patients.</h1>
-        <p className="hero-copy">
-          Track disease activity, medication adherence, education milestones, and visit progress with persistent local
-          data and export-ready clinical reports.
-        </p>
+        <h1>{t('title')}</h1>
+        <p className="hero-copy">{t('subtitle')}</p>
         <div className="hero-actions">
           <button type="button" className={mode === 'consultant' ? 'active' : 'ghost'} onClick={() => setMode('consultant')}>
-            Consultant Mode
+            {t('consultantMode')}
           </button>
           <button type="button" className={mode === 'patient' ? 'active' : 'ghost'} onClick={() => setMode('patient')}>
-            Patient Mode
+            {t('patientMode')}
+          </button>
+          <button type="button" className={language === 'en' ? 'active' : 'ghost'} onClick={() => setLanguage('en')}>
+            English
+          </button>
+          <button type="button" className={language === 'ar' ? 'active' : 'ghost'} onClick={() => setLanguage('ar')}>
+            العربية
           </button>
           <button type="button" className="ghost" onClick={exportReport}>
-            Export Report
+            {t('exportReport')}
           </button>
           {!embedMode ? (
             <button type="button" className="danger" onClick={resetAllData}>
-              Reset All Data
+              {t('resetAll')}
             </button>
           ) : null}
         </div>
@@ -617,6 +882,219 @@ function App() {
                   <li key={step}>{step}</li>
                 ))}
               </ol>
+            </div>
+          </div>
+        </section>
+
+        <section className="card">
+          <h2>{t('multilingualAndDrugHub')}</h2>
+          <div className="form-grid compact">
+            <label>
+              {t('selectedDrug')}
+              <select value={selectedDrug} onChange={(e) => setSelectedDrug(e.target.value)}>
+                {DRUG_CATALOG.map((drug) => (
+                  <option key={drug.key} value={drug.key}>
+                    {drug.name[language]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="drug-grid">
+            <div className="drug-box">
+              <h3>{currentDrug.name[language]}</h3>
+              <p><strong>{t('class')}:</strong> {currentDrug.class[language]}</p>
+              <p><strong>{t('indications')}:</strong> {currentDrug.indications[language]}</p>
+              <p><strong>{t('keySideEffects')}:</strong> {currentDrug.sideEffects[language]}</p>
+              <p><strong>{t('contraindications')}:</strong> {currentDrug.contraindications[language]}</p>
+              <h4>{t('pharmacogenetics')}</h4>
+              {currentDrug.pgx.length ? (
+                <ul>
+                  {currentDrug.pgx.map((item) => (
+                    <li key={`${currentDrug.key}-${item.gene}`}>
+                      <strong>{item.gene}:</strong> {item.note[language]}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">{t('noPgx')}</p>
+              )}
+            </div>
+
+            <div className="drug-box">
+              <h3>{t('interactionChecker')}</h3>
+              <div className="form-grid">
+                <label>
+                  {t('drugA')}
+                  <select value={interactionA} onChange={(e) => setInteractionA(e.target.value)}>
+                    {DRUG_CATALOG.map((drug) => (
+                      <option key={`a-${drug.key}`} value={drug.key}>
+                        {drug.name[language]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t('drugB')}
+                  <select value={interactionB} onChange={(e) => setInteractionB(e.target.value)}>
+                    {DRUG_CATALOG.map((drug) => (
+                      <option key={`b-${drug.key}`} value={drug.key}>
+                        {drug.name[language]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p>
+                <strong>{t('interactionResult')}:</strong>{' '}
+                {interactionResult
+                  ? `${interactionResult.severity} - ${interactionResult.note[language]}`
+                  : t('noInteraction')}
+              </p>
+              <h4>{t('suggestedTests')}</h4>
+              <ul>
+                {dynamicSuggestedTests.map((test) => (
+                  <li key={test}>{test}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="drug-grid">
+            <div className="drug-box">
+              <h3>{t('addLabResult')}</h3>
+              <div className="form-grid compact">
+                <label>
+                  Date
+                  <input
+                    type="date"
+                    value={testEntry.date}
+                    onChange={(e) => setTestEntry((prev) => ({ ...prev, date: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  {t('testType')}
+                  <input
+                    type="text"
+                    value={testEntry.type}
+                    onChange={(e) => setTestEntry((prev) => ({ ...prev, type: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  {t('value')}
+                  <input
+                    type="text"
+                    value={testEntry.value}
+                    onChange={(e) => setTestEntry((prev) => ({ ...prev, value: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  {t('unit')}
+                  <input
+                    type="text"
+                    value={testEntry.unit}
+                    onChange={(e) => setTestEntry((prev) => ({ ...prev, unit: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="form-grid">
+                <label>
+                  {t('normalRange')}
+                  <input
+                    type="text"
+                    value={testEntry.normalRange}
+                    onChange={(e) => setTestEntry((prev) => ({ ...prev, normalRange: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  {t('interpretation')}
+                  <input
+                    type="text"
+                    value={testEntry.interpretation}
+                    onChange={(e) => setTestEntry((prev) => ({ ...prev, interpretation: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <button type="button" onClick={addTestResult}>{t('add')}</button>
+              <h4>{t('savedTests')}</h4>
+              <div className="list-area">
+                {testResults.length ? (
+                  testResults.slice(0, 5).map((item) => (
+                    <div key={item.id} className="list-item stacked">
+                      <strong>{item.date}</strong>
+                      <span>{item.type}: {item.value} {item.unit} ({item.normalRange || 'N/A'})</span>
+                      <span className="muted">{item.interpretation || 'N/A'}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="muted">No test results yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="drug-box">
+              <h3>{t('addRadiology')}</h3>
+              <div className="form-grid compact">
+                <label>
+                  Date
+                  <input
+                    type="date"
+                    value={radiologyEntry.date}
+                    onChange={(e) => setRadiologyEntry((prev) => ({ ...prev, date: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  {t('modality')}
+                  <input
+                    type="text"
+                    value={radiologyEntry.modality}
+                    onChange={(e) => setRadiologyEntry((prev) => ({ ...prev, modality: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  {t('region')}
+                  <input
+                    type="text"
+                    value={radiologyEntry.region}
+                    onChange={(e) => setRadiologyEntry((prev) => ({ ...prev, region: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="form-grid">
+                <label>
+                  {t('finding')}
+                  <input
+                    type="text"
+                    value={radiologyEntry.finding}
+                    onChange={(e) => setRadiologyEntry((prev) => ({ ...prev, finding: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  {t('impression')}
+                  <input
+                    type="text"
+                    value={radiologyEntry.impression}
+                    onChange={(e) => setRadiologyEntry((prev) => ({ ...prev, impression: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <button type="button" onClick={addRadiologyResult}>{t('add')}</button>
+              <h4>{t('savedRadiology')}</h4>
+              <div className="list-area">
+                {radiologyResults.length ? (
+                  radiologyResults.slice(0, 5).map((item) => (
+                    <div key={item.id} className="list-item stacked">
+                      <strong>{item.date}</strong>
+                      <span>{item.modality} - {item.region}</span>
+                      <span>{item.finding || 'N/A'}</span>
+                      <span className="muted">{item.impression || 'N/A'}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="muted">No radiology entries yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </section>

@@ -230,6 +230,7 @@ body {
 .rcc-app input[type='text'],
 .rcc-app input[type='number'],
 .rcc-app input[type='date'],
+.rcc-app select,
 .rcc-app textarea {
   border-radius: 10px;
   border: 1px solid rgba(184, 205, 255, 0.28);
@@ -242,6 +243,7 @@ body {
 .rcc-app input[type='text']:focus,
 .rcc-app input[type='number']:focus,
 .rcc-app input[type='date']:focus,
+.rcc-app select:focus,
 .rcc-app textarea:focus {
   outline: 2px solid rgba(116, 217, 255, 0.42);
   outline-offset: 1px;
@@ -275,6 +277,11 @@ body {
 .rcc-app h3 {
   font-size: 1rem;
   margin-bottom: 6px;
+}
+
+.rcc-app h4 {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
 }
 
 .rcc-app .tools-list p {
@@ -496,6 +503,32 @@ body {
   color: var(--rcc-text-soft);
 }
 
+.rcc-app .drug-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rcc-app .drug-box {
+  border: 1px solid rgba(184, 205, 255, 0.2);
+  border-radius: 14px;
+  background: var(--rcc-card-strong);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.rcc-app .drug-box p {
+  color: var(--rcc-text-soft);
+  font-size: 0.9rem;
+}
+
+.rcc-app .drug-box ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--rcc-text-soft);
+}
+
 .rcc-app .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -594,6 +627,15 @@ body {
   opacity: 0.8;
 }
 
+.rcc-app.rcc-rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+.rcc-app.rcc-rtl .hero-actions {
+  justify-content: flex-end;
+}
+
 @media (max-width: 980px) {
   .rcc-app .grid {
     grid-template-columns: 1fr;
@@ -604,6 +646,10 @@ body {
   }
 
   .rcc-app .insight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rcc-app .drug-grid {
     grid-template-columns: 1fr;
   }
 
