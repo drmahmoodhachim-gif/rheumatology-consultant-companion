@@ -428,6 +428,74 @@ body {
   font-size: 0.82rem;
 }
 
+.rcc-app .insight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rcc-app .insight-panel {
+  border: 1px solid rgba(184, 205, 255, 0.2);
+  border-radius: 14px;
+  background: var(--rcc-card-strong);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.rcc-app .sim-result {
+  border-radius: 12px;
+  border: 1px solid rgba(184, 205, 255, 0.22);
+  background: rgba(11, 16, 32, 0.5);
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.rcc-app .sim-result strong {
+  font-size: 1.35rem;
+}
+
+.rcc-app .alert-list {
+  display: grid;
+  gap: 8px;
+}
+
+.rcc-app .alert-row {
+  border-radius: 10px;
+  border: 1px solid rgba(184, 205, 255, 0.2);
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.rcc-app .alert-row span {
+  font-size: 0.88rem;
+}
+
+.rcc-app .alert-row.critical {
+  background: rgba(255, 107, 138, 0.18);
+  border-color: rgba(255, 107, 138, 0.45);
+}
+
+.rcc-app .alert-row.high {
+  background: rgba(255, 209, 102, 0.18);
+  border-color: rgba(255, 209, 102, 0.45);
+}
+
+.rcc-app .alert-row.medium {
+  background: rgba(116, 217, 255, 0.15);
+  border-color: rgba(116, 217, 255, 0.4);
+}
+
+.rcc-app .action-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--rcc-text-soft);
+}
+
 .rcc-app .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -532,6 +600,10 @@ body {
   }
 
   .rcc-app .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rcc-app .insight-grid {
     grid-template-columns: 1fr;
   }
 

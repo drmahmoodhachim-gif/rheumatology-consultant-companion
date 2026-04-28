@@ -28,6 +28,14 @@ const defaultPredictors = {
   activeInfection: false,
 }
 
+const defaultSimulator = {
+  sleepDelta: 1,
+  stressDelta: -2,
+  activityDelta: 20,
+  stepsDelta: 2000,
+  adherenceDelta: 10,
+}
+
 const educationContent = {
   'newly-diagnosed': {
     title: 'Newly Diagnosed Starter Path',
@@ -88,6 +96,35 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
 }
 
+function computeFlareScore({ predictors, activityScore, medicationAdherence, journalTrendPerDay }) {
+  const normalizedCrp = clamp((predictors.crp / 30) * 100, 0, 100)
+  const normalizedEsr = clamp((predictors.esr / 60) * 100, 0, 100)
+  const sleepPenalty = clamp((8 - predictors.sleepHours) * 12, 0, 35)
+  const stressPenalty = predictors.stress * 5.5
+  const activityPenalty = clamp((45 - predictors.activityMinutes) * 1.4, 0, 35)
+  const stepsPenalty = clamp((7000 - predictors.steps) / 120, 0, 35)
+  const bmiPenalty = predictors.bmi > 25 ? clamp((predictors.bmi - 25) * 2.8, 0, 28) : 0
+  const trendPenalty = clamp((journalTrendPerDay + 1.2) * 16, 0, 35)
+  const adherencePenalty = (100 - medicationAdherence) * 0.26
+  const immuneLoad = predictors.activeInfection ? 12 : 0
+  const smokeLoad = predictors.smoking ? 9 : 0
+  const score =
+    activityScore * 8.4 +
+    predictors.tenderJoints * 2 +
+    normalizedCrp * 0.18 +
+    normalizedEsr * 0.14 +
+    sleepPenalty +
+    stressPenalty +
+    activityPenalty +
+    stepsPenalty +
+    bmiPenalty +
+    trendPenalty +
+    adherencePenalty +
+    immuneLoad +
+    smokeLoad
+  return clamp(Math.round(score / 3.2), 1, 99)
+}
+
 function App() {
   const embedMode = new URLSearchParams(window.location.search).get('embed') === '1'
   const initialData = loadFromStorage()
@@ -100,6 +137,7 @@ function App() {
   const [educationTrack, setEducationTrack] = useState(initialData?.educationTrack ?? 'newly-diagnosed')
   const [checklist, setChecklist] = useState(initialData?.checklist ?? defaultChecklist)
   const [predictors, setPredictors] = useState(initialData?.predictors ?? defaultPredictors)
+  const [simulator, setSimulator] = useState(initialData?.simulator ?? defaultSimulator)
   const [meds, setMeds] = useState(initialData?.meds ?? [])
   const [medInput, setMedInput] = useState('')
   const [journalEntry, setJournalEntry] = useState({
@@ -123,12 +161,13 @@ function App() {
       educationTrack,
       checklist,
       predictors,
+      simulator,
       meds,
       journal,
       visitHistory,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [profile, pain, stiffness, swollenJoints, energy, educationTrack, checklist, predictors, meds, journal, visitHistory])
+  }, [profile, pain, stiffness, swollenJoints, energy, educationTrack, checklist, predictors, simulator, meds, journal, visitHistory])
 
   const activityScore = useMemo(() => {
     const weightedSum = pain * 0.32 + stiffness * 0.28 + swollenJoints * 0.3 + (10 - energy) * 0.1
@@ -170,32 +209,7 @@ function App() {
   }, [recentJournal])
 
   const flareScore = useMemo(() => {
-    const normalizedCrp = clamp((predictors.crp / 30) * 100, 0, 100)
-    const normalizedEsr = clamp((predictors.esr / 60) * 100, 0, 100)
-    const sleepPenalty = clamp((8 - predictors.sleepHours) * 12, 0, 35)
-    const stressPenalty = predictors.stress * 5.5
-    const activityPenalty = clamp((45 - predictors.activityMinutes) * 1.4, 0, 35)
-    const stepsPenalty = clamp((7000 - predictors.steps) / 120, 0, 35)
-    const bmiPenalty = predictors.bmi > 25 ? clamp((predictors.bmi - 25) * 2.8, 0, 28) : 0
-    const trendPenalty = clamp((journalTrendPerDay + 1.2) * 16, 0, 35)
-    const adherencePenalty = (100 - medicationAdherence) * 0.26
-    const immuneLoad = predictors.activeInfection ? 12 : 0
-    const smokeLoad = predictors.smoking ? 9 : 0
-    const score =
-      activityScore * 8.4 +
-      predictors.tenderJoints * 2 +
-      normalizedCrp * 0.18 +
-      normalizedEsr * 0.14 +
-      sleepPenalty +
-      stressPenalty +
-      activityPenalty +
-      stepsPenalty +
-      bmiPenalty +
-      trendPenalty +
-      adherencePenalty +
-      immuneLoad +
-      smokeLoad
-    return clamp(Math.round(score / 3.2), 1, 99)
+    return computeFlareScore({ predictors, activityScore, medicationAdherence, journalTrendPerDay })
   }, [activityScore, medicationAdherence, predictors, journalTrendPerDay])
 
   const flareRisk = useMemo(() => {
@@ -243,6 +257,59 @@ function App() {
       })
       .join(' ')
   }, [sparklineData])
+
+  const simulatedScenario = useMemo(() => {
+    const projectedPredictors = {
+      ...predictors,
+      sleepHours: clamp(predictors.sleepHours + simulator.sleepDelta, 0, 12),
+      stress: clamp(predictors.stress + simulator.stressDelta, 0, 10),
+      activityMinutes: clamp(predictors.activityMinutes + simulator.activityDelta, 0, 240),
+      steps: clamp(predictors.steps + simulator.stepsDelta, 0, 50000),
+    }
+    const projectedAdherence = clamp(medicationAdherence + simulator.adherenceDelta, 0, 100)
+    const projectedTrend = clamp(
+      journalTrendPerDay - simulator.sleepDelta * 0.05 - simulator.activityDelta * 0.002 + simulator.stressDelta * 0.03,
+      -2,
+      2,
+    )
+    const projectedScore = computeFlareScore({
+      predictors: projectedPredictors,
+      activityScore,
+      medicationAdherence: projectedAdherence,
+      journalTrendPerDay: projectedTrend,
+    })
+    const delta = projectedScore - flareScore
+    return {
+      projectedPredictors,
+      projectedAdherence,
+      projectedScore,
+      delta,
+      projectedRisk: projectedScore < 35 ? 'Low' : projectedScore < 65 ? 'Moderate' : 'High',
+    }
+  }, [predictors, simulator, medicationAdherence, journalTrendPerDay, activityScore, flareScore])
+
+  const riskAlerts = useMemo(() => {
+    const alerts = []
+    if (flareScore >= 75) alerts.push({ level: 'critical', text: 'Predicted flare risk is critical; prioritize urgent review plan.' })
+    if (predictors.crp >= 20 || predictors.esr >= 40) alerts.push({ level: 'high', text: 'Inflammatory markers are elevated above target zone.' })
+    if (medicationAdherence < 60) alerts.push({ level: 'high', text: 'Medication adherence is below 60%; intervention needed.' })
+    if (predictors.sleepHours < 6 && predictors.stress >= 7) alerts.push({ level: 'medium', text: 'High stress with low sleep raises near-term flare pressure.' })
+    if (predictors.activeInfection) alerts.push({ level: 'critical', text: 'Active infection flag can destabilize disease activity.' })
+    if (journalTrendPerDay > 0.15) alerts.push({ level: 'medium', text: 'Journal trend is accelerating in the wrong direction.' })
+    return alerts
+  }, [flareScore, predictors, medicationAdherence, journalTrendPerDay])
+
+  const actionPlan = useMemo(() => {
+    const plan = []
+    if (flareScore >= 65) plan.push('Increase follow-up frequency and set early escalation threshold.')
+    if (predictors.crp >= 20 || predictors.esr >= 40) plan.push('Repeat inflammatory panel and correlate with clinical exam.')
+    if (medicationAdherence < 70) plan.push('Run adherence barrier review and simplify regimen timing.')
+    if (predictors.sleepHours < 6) plan.push('Initiate short sleep intervention protocol for the next 2 weeks.')
+    if (predictors.stress >= 7) plan.push('Add stress-modulation tasks and daily breathing routine reminders.')
+    if (predictors.steps < 5000 || predictors.activityMinutes < 25) plan.push('Set progressive movement goal with weekly increments.')
+    if (!plan.length) plan.push('Maintain current plan and continue weekly monitoring.')
+    return plan.slice(0, 5)
+  }, [flareScore, predictors, medicationAdherence])
 
   const adherenceNudge = useMemo(() => {
     if (flareScore >= 70) return 'High risk: escalate review cadence and consider rescue protocol + lab recheck window.'
@@ -326,6 +393,7 @@ function App() {
       `Flare Risk Band: ${flareRisk}`,
       `Flare Probability Score: ${flareScore}%`,
       `14-Day Stability Forecast: ${forecast14Day}%`,
+      `Scenario Projected Flare Score: ${simulatedScenario.projectedScore}% (${simulatedScenario.projectedRisk})`,
       '',
       `Tender joints: ${predictors.tenderJoints}`,
       `CRP (mg/L): ${predictors.crp}`,
@@ -335,6 +403,8 @@ function App() {
       `Activity (min/day): ${predictors.activityMinutes}`,
       `Steps/day: ${predictors.steps}`,
       `BMI: ${predictors.bmi}`,
+      `Smoking: ${predictors.smoking ? 'Yes' : 'No'}`,
+      `Active infection: ${predictors.activeInfection ? 'Yes' : 'No'}`,
       '',
       `Education Track: ${educationContent[educationTrack].title}`,
       `Education Completed: ${checkedItems || 'None'}`,
@@ -345,6 +415,12 @@ function App() {
           ? `${latestJournal.date} | pain ${latestJournal.pain}, stiffness ${latestJournal.stiffness}, fatigue ${latestJournal.fatigue}, sleep ${latestJournal.sleepHours}h, stress ${latestJournal.stress}`
           : 'N/A'
       }`,
+      '',
+      'Active Alerts:',
+      ...(riskAlerts.length ? riskAlerts.map((a) => `- [${a.level.toUpperCase()}] ${a.text}`) : ['- None']),
+      '',
+      'Action Plan:',
+      ...actionPlan.map((step) => `- ${step}`),
       '',
       'Medications:',
       ...(meds.length ? meds.map((m) => `- ${m.name}: ${m.takenToday ? 'Taken today' : 'Pending'}`) : ['- None']),
@@ -363,6 +439,7 @@ function App() {
     setEducationTrack('newly-diagnosed')
     setChecklist(defaultChecklist)
     setPredictors(defaultPredictors)
+    setSimulator(defaultSimulator)
     setMeds([])
     setJournal([])
     setVisitHistory([])
@@ -454,6 +531,93 @@ function App() {
                 <strong>{Math.round(driver.value)}%</strong>
               </div>
             ))}
+          </div>
+          <div className="insight-grid">
+            <div className="insight-panel">
+              <h3>What-If Simulator</h3>
+              <p className="muted">Model targeted behavior changes before applying real interventions.</p>
+              <div className="form-grid compact">
+                <label>
+                  Sleep delta (h)
+                  <input
+                    type="number"
+                    min="-4"
+                    max="4"
+                    value={simulator.sleepDelta}
+                    onChange={(e) => setSimulator((prev) => ({ ...prev, sleepDelta: Number(e.target.value) }))}
+                  />
+                </label>
+                <label>
+                  Stress delta
+                  <input
+                    type="number"
+                    min="-5"
+                    max="5"
+                    value={simulator.stressDelta}
+                    onChange={(e) => setSimulator((prev) => ({ ...prev, stressDelta: Number(e.target.value) }))}
+                  />
+                </label>
+                <label>
+                  Activity delta (min/day)
+                  <input
+                    type="number"
+                    min="-60"
+                    max="90"
+                    value={simulator.activityDelta}
+                    onChange={(e) => setSimulator((prev) => ({ ...prev, activityDelta: Number(e.target.value) }))}
+                  />
+                </label>
+                <label>
+                  Steps delta
+                  <input
+                    type="number"
+                    min="-6000"
+                    max="12000"
+                    value={simulator.stepsDelta}
+                    onChange={(e) => setSimulator((prev) => ({ ...prev, stepsDelta: Number(e.target.value) }))}
+                  />
+                </label>
+                <label>
+                  Adherence delta (%)
+                  <input
+                    type="number"
+                    min="-40"
+                    max="40"
+                    value={simulator.adherenceDelta}
+                    onChange={(e) => setSimulator((prev) => ({ ...prev, adherenceDelta: Number(e.target.value) }))}
+                  />
+                </label>
+              </div>
+              <div className="sim-result">
+                <span>Projected flare score</span>
+                <strong>{simulatedScenario.projectedScore}%</strong>
+                <small className={simulatedScenario.delta > 0 ? 'risk-up' : 'risk-down'}>
+                  {simulatedScenario.delta > 0 ? '+' : ''}
+                  {simulatedScenario.delta} vs current ({simulatedScenario.projectedRisk})
+                </small>
+              </div>
+            </div>
+
+            <div className="insight-panel">
+              <h3>Risk Alerts + Action Plan</h3>
+              <div className="alert-list">
+                {riskAlerts.length ? (
+                  riskAlerts.map((alert) => (
+                    <div key={alert.text} className={`alert-row ${alert.level}`}>
+                      <strong>{alert.level.toUpperCase()}</strong>
+                      <span>{alert.text}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="muted">No active risk alerts.</p>
+                )}
+              </div>
+              <ol className="action-list">
+                {actionPlan.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </div>
           </div>
         </section>
 
