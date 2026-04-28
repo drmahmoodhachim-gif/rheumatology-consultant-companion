@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-const STORAGE_KEY = 'rheumatology-companion-v2'
+const STORAGE_KEY = 'rheumatology-companion-v3'
 
 const defaultProfile = {
   patientName: '',
@@ -13,6 +13,19 @@ const defaultChecklist = {
   medsExplained: false,
   flarePlanReviewed: false,
   exercisePlanGiven: false,
+}
+
+const defaultPredictors = {
+  tenderJoints: 6,
+  crp: 12,
+  esr: 28,
+  sleepHours: 6,
+  stress: 6,
+  activityMinutes: 25,
+  steps: 4500,
+  bmi: 27,
+  smoking: false,
+  activeInfection: false,
 }
 
 const educationContent = {
@@ -71,6 +84,10 @@ function downloadTextFile(fileName, content) {
   URL.revokeObjectURL(url)
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max)
+}
+
 function App() {
   const embedMode = new URLSearchParams(window.location.search).get('embed') === '1'
   const initialData = loadFromStorage()
@@ -82,6 +99,7 @@ function App() {
   const [energy, setEnergy] = useState(initialData?.triage?.energy ?? 6)
   const [educationTrack, setEducationTrack] = useState(initialData?.educationTrack ?? 'newly-diagnosed')
   const [checklist, setChecklist] = useState(initialData?.checklist ?? defaultChecklist)
+  const [predictors, setPredictors] = useState(initialData?.predictors ?? defaultPredictors)
   const [meds, setMeds] = useState(initialData?.meds ?? [])
   const [medInput, setMedInput] = useState('')
   const [journalEntry, setJournalEntry] = useState({
@@ -89,6 +107,9 @@ function App() {
     pain: 4,
     stiffness: 4,
     fatigue: 4,
+    sleepHours: 6,
+    stress: 5,
+    steps: 4500,
     notes: '',
   })
   const [journal, setJournal] = useState(initialData?.journal ?? [])
@@ -101,12 +122,13 @@ function App() {
       triage: { pain, stiffness, swollenJoints, energy },
       educationTrack,
       checklist,
+      predictors,
       meds,
       journal,
       visitHistory,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [profile, pain, stiffness, swollenJoints, energy, educationTrack, checklist, meds, journal, visitHistory])
+  }, [profile, pain, stiffness, swollenJoints, energy, educationTrack, checklist, predictors, meds, journal, visitHistory])
 
   const activityScore = useMemo(() => {
     const weightedSum = pain * 0.32 + stiffness * 0.28 + swollenJoints * 0.3 + (10 - energy) * 0.1
@@ -129,23 +151,107 @@ function App() {
     return Math.round((taken / meds.length) * 100)
   }, [meds])
 
+  const recentJournal = useMemo(
+    () => [...journal].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(-10),
+    [journal],
+  )
+
+  const journalTrendPerDay = useMemo(() => {
+    if (recentJournal.length < 2) return 0
+    const first = recentJournal[0]
+    const last = recentJournal[recentJournal.length - 1]
+    const firstAvg = (Number(first.pain) + Number(first.stiffness) + Number(first.fatigue)) / 3
+    const lastAvg = (Number(last.pain) + Number(last.stiffness) + Number(last.fatigue)) / 3
+    const totalDays = Math.max(
+      1,
+      (new Date(last.date).getTime() - new Date(first.date).getTime()) / (1000 * 60 * 60 * 24),
+    )
+    return Number(((lastAvg - firstAvg) / totalDays).toFixed(2))
+  }, [recentJournal])
+
+  const flareScore = useMemo(() => {
+    const normalizedCrp = clamp((predictors.crp / 30) * 100, 0, 100)
+    const normalizedEsr = clamp((predictors.esr / 60) * 100, 0, 100)
+    const sleepPenalty = clamp((8 - predictors.sleepHours) * 12, 0, 35)
+    const stressPenalty = predictors.stress * 5.5
+    const activityPenalty = clamp((45 - predictors.activityMinutes) * 1.4, 0, 35)
+    const stepsPenalty = clamp((7000 - predictors.steps) / 120, 0, 35)
+    const bmiPenalty = predictors.bmi > 25 ? clamp((predictors.bmi - 25) * 2.8, 0, 28) : 0
+    const trendPenalty = clamp((journalTrendPerDay + 1.2) * 16, 0, 35)
+    const adherencePenalty = (100 - medicationAdherence) * 0.26
+    const immuneLoad = predictors.activeInfection ? 12 : 0
+    const smokeLoad = predictors.smoking ? 9 : 0
+    const score =
+      activityScore * 8.4 +
+      predictors.tenderJoints * 2 +
+      normalizedCrp * 0.18 +
+      normalizedEsr * 0.14 +
+      sleepPenalty +
+      stressPenalty +
+      activityPenalty +
+      stepsPenalty +
+      bmiPenalty +
+      trendPenalty +
+      adherencePenalty +
+      immuneLoad +
+      smokeLoad
+    return clamp(Math.round(score / 3.2), 1, 99)
+  }, [activityScore, medicationAdherence, predictors, journalTrendPerDay])
+
   const flareRisk = useMemo(() => {
-    const journalAverage =
-      journal.length > 0
-        ? journal.reduce((acc, item) => acc + (item.pain + item.stiffness + item.fatigue) / 3, 0) / journal.length
-        : 0
-    const score = activityScore * 0.6 + (100 - medicationAdherence) * 0.2 + journalAverage * 0.2
-    if (score < 30) return 'Low'
-    if (score < 60) return 'Moderate'
+    if (flareScore < 35) return 'Low'
+    if (flareScore < 65) return 'Moderate'
     return 'High'
-  }, [activityScore, medicationAdherence, journal])
+  }, [flareScore])
+
+  const forecast14Day = useMemo(() => {
+    const base = 100 - flareScore
+    const trendAdjust = journalTrendPerDay > 0 ? -8 : 6
+    const adherenceAdjust = medicationAdherence > 80 ? 6 : -4
+    return clamp(Math.round(base + trendAdjust + adherenceAdjust), 5, 95)
+  }, [flareScore, journalTrendPerDay, medicationAdherence])
+
+  const riskDrivers = useMemo(() => {
+    const drivers = [
+      { name: 'Inflammation markers (CRP/ESR)', value: clamp(((predictors.crp / 30) * 100 + (predictors.esr / 60) * 100) / 2, 0, 100) },
+      { name: 'Clinical symptoms', value: clamp(activityScore * 10, 0, 100) },
+      { name: 'Medication adherence gap', value: clamp(100 - medicationAdherence, 0, 100) },
+      { name: 'Stress + low sleep', value: clamp(predictors.stress * 8 + (8 - predictors.sleepHours) * 10, 0, 100) },
+      { name: 'Low movement load', value: clamp((7000 - predictors.steps) / 70 + (45 - predictors.activityMinutes), 0, 100) },
+      { name: 'Trend acceleration', value: clamp((journalTrendPerDay + 1.2) * 40, 0, 100) },
+    ]
+    return drivers.sort((a, b) => b.value - a.value).slice(0, 4)
+  }, [predictors, activityScore, medicationAdherence, journalTrendPerDay])
+
+  const sparklineData = useMemo(() => {
+    if (!recentJournal.length) return []
+    return recentJournal.map((entry, index) => {
+      const average = (Number(entry.pain) + Number(entry.stiffness) + Number(entry.fatigue)) / 3
+      return { x: index, y: average }
+    })
+  }, [recentJournal])
+
+  const sparklinePoints = useMemo(() => {
+    if (!sparklineData.length) return ''
+    const width = 220
+    const height = 64
+    return sparklineData
+      .map((point, i) => {
+        const x = sparklineData.length === 1 ? 0 : (i / (sparklineData.length - 1)) * width
+        const y = height - (point.y / 10) * height
+        return `${x},${y}`
+      })
+      .join(' ')
+  }, [sparklineData])
 
   const adherenceNudge = useMemo(() => {
+    if (flareScore >= 70) return 'High risk: escalate review cadence and consider rescue protocol + lab recheck window.'
     if (medicationAdherence < 50) return 'Adherence is low. Confirm barriers and simplify dose scheduling.'
+    if (predictors.sleepHours < 6 || predictors.stress >= 7) return 'Lifestyle signal is worsening. Add sleep/stress interventions now.'
     if (energy <= 3) return 'Prioritize fatigue plan, sleep hygiene, and lighter movement blocks this week.'
     if (pain >= 7) return 'Discuss flare rescue protocol and pre-visit monitoring reminders with the patient.'
     return 'Continue current routine and reinforce hydration, mobility, and medication timing.'
-  }, [medicationAdherence, energy, pain])
+  }, [flareScore, medicationAdherence, predictors.sleepHours, predictors.stress, energy, pain])
 
   function saveVisitSnapshot() {
     const snapshot = {
@@ -155,6 +261,8 @@ function App() {
       risk: riskLevel.label,
       adherence: medicationAdherence,
       flareRisk,
+      flareScore,
+      forecast14Day,
     }
     setVisitHistory((prev) => [snapshot, ...prev].slice(0, 20))
     setStatusMessage('Visit snapshot saved to timeline.')
@@ -188,6 +296,9 @@ function App() {
       pain: Number(journalEntry.pain),
       stiffness: Number(journalEntry.stiffness),
       fatigue: Number(journalEntry.fatigue),
+      sleepHours: Number(journalEntry.sleepHours),
+      stress: Number(journalEntry.stress),
+      steps: Number(journalEntry.steps),
     }
     setJournal((prev) => [entry, ...prev].slice(0, 30))
     setJournalEntry((prev) => ({ ...prev, notes: '' }))
@@ -212,7 +323,18 @@ function App() {
       '',
       `Current Activity Score: ${activityScore} (${riskLevel.label})`,
       `Medication Adherence: ${medicationAdherence}%`,
-      `Flare Risk: ${flareRisk}`,
+      `Flare Risk Band: ${flareRisk}`,
+      `Flare Probability Score: ${flareScore}%`,
+      `14-Day Stability Forecast: ${forecast14Day}%`,
+      '',
+      `Tender joints: ${predictors.tenderJoints}`,
+      `CRP (mg/L): ${predictors.crp}`,
+      `ESR (mm/h): ${predictors.esr}`,
+      `Sleep (hours): ${predictors.sleepHours}`,
+      `Stress (0-10): ${predictors.stress}`,
+      `Activity (min/day): ${predictors.activityMinutes}`,
+      `Steps/day: ${predictors.steps}`,
+      `BMI: ${predictors.bmi}`,
       '',
       `Education Track: ${educationContent[educationTrack].title}`,
       `Education Completed: ${checkedItems || 'None'}`,
@@ -220,7 +342,7 @@ function App() {
       `Latest Visit: ${latestVisit ? `${new Date(latestVisit.date).toLocaleString()} | Score ${latestVisit.score}` : 'N/A'}`,
       `Latest Journal: ${
         latestJournal
-          ? `${latestJournal.date} | pain ${latestJournal.pain}, stiffness ${latestJournal.stiffness}, fatigue ${latestJournal.fatigue}`
+          ? `${latestJournal.date} | pain ${latestJournal.pain}, stiffness ${latestJournal.stiffness}, fatigue ${latestJournal.fatigue}, sleep ${latestJournal.sleepHours}h, stress ${latestJournal.stress}`
           : 'N/A'
       }`,
       '',
@@ -240,6 +362,7 @@ function App() {
     setEnergy(6)
     setEducationTrack('newly-diagnosed')
     setChecklist(defaultChecklist)
+    setPredictors(defaultPredictors)
     setMeds([])
     setJournal([])
     setVisitHistory([])
@@ -277,6 +400,63 @@ function App() {
       </header>
 
       <main className="grid">
+        <section className="card dashboard-visual">
+          <div className="card-head">
+            <h2>Predictive Dashboard</h2>
+            <span className={flareRisk === 'High' ? 'pill high' : flareRisk === 'Moderate' ? 'pill moderate' : 'pill low'}>
+              {flareRisk} flare risk
+            </span>
+          </div>
+          <div className="metric-grid">
+            <div className="metric-card">
+              <span>Flare Probability</span>
+              <div
+                className="ring"
+                style={{
+                  background: `conic-gradient(rgba(255,107,138,0.92) ${flareScore * 3.6}deg, rgba(184,205,255,0.2) ${flareScore * 3.6}deg)`,
+                }}
+              >
+                <strong>{flareScore}%</strong>
+              </div>
+            </div>
+            <div className="metric-card">
+              <span>14-Day Stability Forecast</span>
+              <div
+                className="ring success"
+                style={{
+                  background: `conic-gradient(rgba(61,226,159,0.9) ${forecast14Day * 3.6}deg, rgba(184,205,255,0.2) ${forecast14Day * 3.6}deg)`,
+                }}
+              >
+                <strong>{forecast14Day}%</strong>
+              </div>
+            </div>
+            <div className="metric-card">
+              <span>Symptom Trend (last 10 entries)</span>
+              {sparklineData.length > 1 ? (
+                <svg viewBox="0 0 220 64" className="sparkline" role="img" aria-label="Symptom trend chart">
+                  <polyline points={sparklinePoints} />
+                </svg>
+              ) : (
+                <p className="muted">Add at least 2 journal entries to view trend.</p>
+              )}
+              <small className={journalTrendPerDay > 0 ? 'risk-up' : 'risk-down'}>
+                {journalTrendPerDay > 0 ? 'Worsening' : 'Improving'} trend: {journalTrendPerDay} per day
+              </small>
+            </div>
+          </div>
+          <div className="drivers">
+            {riskDrivers.map((driver) => (
+              <div key={driver.name} className="driver-row">
+                <span>{driver.name}</span>
+                <div>
+                  <i style={{ width: `${driver.value}%` }} />
+                </div>
+                <strong>{Math.round(driver.value)}%</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="card tool-card">
           <div className="card-head">
             <h2>Disease Activity Assistant</h2>
@@ -319,6 +499,46 @@ function App() {
             <input type="range" min="0" max="10" value={energy} onChange={(e) => setEnergy(Number(e.target.value))} />
             <span>{energy}/10</span>
           </label>
+          <div className="form-grid compact">
+            <label>
+              Tender joints
+              <input
+                type="number"
+                min="0"
+                max="28"
+                value={predictors.tenderJoints}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, tenderJoints: Number(e.target.value) }))}
+              />
+            </label>
+            <label>
+              CRP (mg/L)
+              <input
+                type="number"
+                min="0"
+                value={predictors.crp}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, crp: Number(e.target.value) }))}
+              />
+            </label>
+            <label>
+              ESR (mm/h)
+              <input
+                type="number"
+                min="0"
+                value={predictors.esr}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, esr: Number(e.target.value) }))}
+              />
+            </label>
+            <label>
+              BMI
+              <input
+                type="number"
+                min="10"
+                max="60"
+                value={predictors.bmi}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, bmi: Number(e.target.value) }))}
+              />
+            </label>
+          </div>
           <p className="nudge">{adherenceNudge}</p>
           <button type="button" onClick={saveVisitSnapshot}>
             Save Visit Snapshot
@@ -361,6 +581,8 @@ function App() {
           <div className="summary-row">
             <span>Medication adherence: {medicationAdherence}%</span>
             <span>Current flare risk: {flareRisk}</span>
+            <span>Flare probability: {flareScore}%</span>
+            <span>14-day stability: {forecast14Day}%</span>
           </div>
           <div className="timeline">
             <h3>Visit Timeline</h3>
@@ -369,7 +591,7 @@ function App() {
                 <div key={visit.id} className="timeline-item">
                   <strong>{new Date(visit.date).toLocaleString()}</strong>
                   <span>Score {visit.score} | {visit.risk}</span>
-                  <span>Adherence {visit.adherence}% | Flare {visit.flareRisk}</span>
+                  <span>Adherence {visit.adherence}% | Flare {visit.flareRisk} ({visit.flareScore}%)</span>
                 </div>
               ))
             ) : (
@@ -524,6 +746,35 @@ function App() {
                     onChange={(e) => setJournalEntry((prev) => ({ ...prev, fatigue: e.target.value }))}
                   />
                 </label>
+                <label>
+                  Sleep (hours)
+                  <input
+                    type="number"
+                    min="0"
+                    max="12"
+                    value={journalEntry.sleepHours}
+                    onChange={(e) => setJournalEntry((prev) => ({ ...prev, sleepHours: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Stress (0-10)
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={journalEntry.stress}
+                    onChange={(e) => setJournalEntry((prev) => ({ ...prev, stress: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Steps
+                  <input
+                    type="number"
+                    min="0"
+                    value={journalEntry.steps}
+                    onChange={(e) => setJournalEntry((prev) => ({ ...prev, steps: e.target.value }))}
+                  />
+                </label>
               </div>
               <label>
                 Notes
@@ -544,6 +795,9 @@ function App() {
                       <span>
                         Pain {item.pain}, Stiffness {item.stiffness}, Fatigue {item.fatigue}
                       </span>
+                      <span>
+                        Sleep {item.sleepHours}h, Stress {item.stress}, Steps {item.steps}
+                      </span>
                       {item.notes ? <span className="muted">{item.notes}</span> : null}
                     </div>
                   ))
@@ -552,6 +806,64 @@ function App() {
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="form-grid compact predictor-inputs">
+            <label>
+              Sleep baseline (h)
+              <input
+                type="number"
+                min="0"
+                max="12"
+                value={predictors.sleepHours}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, sleepHours: Number(e.target.value) }))}
+              />
+            </label>
+            <label>
+              Stress baseline (0-10)
+              <input
+                type="number"
+                min="0"
+                max="10"
+                value={predictors.stress}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, stress: Number(e.target.value) }))}
+              />
+            </label>
+            <label>
+              Activity min/day
+              <input
+                type="number"
+                min="0"
+                max="180"
+                value={predictors.activityMinutes}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, activityMinutes: Number(e.target.value) }))}
+              />
+            </label>
+            <label>
+              Steps/day
+              <input
+                type="number"
+                min="0"
+                value={predictors.steps}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, steps: Number(e.target.value) }))}
+              />
+            </label>
+            <label className="toggle-line">
+              <input
+                type="checkbox"
+                checked={predictors.smoking}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, smoking: e.target.checked }))}
+              />
+              Current smoker
+            </label>
+            <label className="toggle-line">
+              <input
+                type="checkbox"
+                checked={predictors.activeInfection}
+                onChange={(e) => setPredictors((prev) => ({ ...prev, activeInfection: e.target.checked }))}
+              />
+              Active infection
+            </label>
           </div>
         </section>
       </main>
