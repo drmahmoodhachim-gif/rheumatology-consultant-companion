@@ -1,16 +1,33 @@
-# React + Vite
+# Rheumatology Consultant Companion
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Standalone React application designed as an innovative digital workspace for:
 
-Currently, two official plugins are available:
+- Rheumatology consultant decision support
+- Patient education journeys
+- Practical daily symptom and adherence tools
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Live URLs
 
-## React Compiler
+- Production: https://rheumatology-consultant-companion.netlify.app
+- GitHub: https://github.com/drmahmoodhachim-gif/rheumatology-consultant-companion
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Key Features
 
-## Expanding the ESLint configuration
+- **Disease Activity Assistant** with interactive sliders and risk-state indicator
+- **Consultant Command Center** modules for differential review, safety reminders, and timeline thinking
+- **Patient Education Studio** with stage-based tracks (new diagnosis, flare, long-term care)
+- **Patient Tools** for medication rhythm, mobility guidance, flare journaling, and care-team handoff
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+## Production Build
+
+```bash
+npm run build
+npm run preview
+```
