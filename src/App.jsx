@@ -72,6 +72,7 @@ function downloadTextFile(fileName, content) {
 }
 
 function App() {
+  const embedMode = new URLSearchParams(window.location.search).get('embed') === '1'
   const initialData = loadFromStorage()
   const [mode, setMode] = useState('consultant')
   const [profile, setProfile] = useState(initialData?.profile ?? defaultProfile)
@@ -246,10 +247,11 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`rcc-app ${embedMode ? 'rcc-embed' : ''}`}>
+      <div className="app-shell">
       <header className="hero">
         <div className="hero-glow" />
-        <p className="eyebrow">Rheumatology Consultant Companion</p>
+        <p className="eyebrow">GCC AIR Rheumatology Consultant Companion</p>
         <h1>Fully operational workspace for consultants and patients.</h1>
         <p className="hero-copy">
           Track disease activity, medication adherence, education milestones, and visit progress with persistent local
@@ -265,9 +267,11 @@ function App() {
           <button type="button" className="ghost" onClick={exportReport}>
             Export Report
           </button>
-          <button type="button" className="danger" onClick={resetAllData}>
-            Reset All Data
-          </button>
+          {!embedMode ? (
+            <button type="button" className="danger" onClick={resetAllData}>
+              Reset All Data
+            </button>
+          ) : null}
         </div>
         {statusMessage ? <p className="status-message">{statusMessage}</p> : null}
       </header>
@@ -553,9 +557,13 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>Operational standalone project with local persistence, visit logging, adherence tracking, and report export.</p>
-        <small>Live on GitHub + Netlify</small>
+        <p>
+          Integration-ready module for future GCC AIR website incorporation with local persistence, visit logging,
+          adherence tracking, and report export.
+        </p>
+        <small>{embedMode ? 'Embed Mode Active (?embed=1)' : 'Standalone Mode Active'}</small>
       </footer>
+      </div>
     </div>
   )
 }
